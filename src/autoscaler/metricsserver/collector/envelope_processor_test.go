@@ -81,7 +81,7 @@ var _ = Describe("EnvelopeProcessor", func() {
 					CollectedAt:   fclock.Now().UnixNano(),
 					Name:          models.MetricNameCPUUtil,
 					Unit:          models.UnitPercentage,
-					Value:         "10",
+					Value:         "11",
 					Timestamp:     1111,
 				})))
 			})
@@ -315,3 +315,4 @@ func GenerateHttpStartStopEnvelope(sourceID, instance string, start, stop, times
 	}
 	return e
 }
+

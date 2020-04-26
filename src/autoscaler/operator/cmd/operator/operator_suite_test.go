@@ -15,8 +15,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/onsi/gomega/ghttp"
+	yaml "gopkg.in/yaml.v2"
 	_ "github.com/go-sql-driver/mysql"
-	"gopkg.in/yaml.v2"
 
 	"autoscaler/cf"
 	"autoscaler/db"
@@ -140,6 +140,9 @@ func initConfig() {
 	}
 	cfg.AppSyncer.SyncInterval = 60 * time.Second
 	cfg.HttpClientTimeout = 10 * time.Second
+
+	cfg.Health.HealthCheckUsername = "operatorhealthcheckuser"
+	cfg.Health.HealthCheckPassword = "operatorhealthcheckuser"
 
 }
 

@@ -24,8 +24,8 @@ import (
 	"github.com/onsi/gomega/ghttp"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	yaml "gopkg.in/yaml.v2"
 
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -251,7 +251,9 @@ func initConfig() {
 		DefaultStatWindowSecs:     300,
 		HttpClientTimeout:         10 * time.Second,
 		Health: models.HealthConfig{
-			Port: healthport,
+			Port:                healthport,
+			HealthCheckUsername: "healthcheckuser",
+			HealthCheckPassword: "healthcheckpassword",
 		},
 	}
 	configFile = writeConfig(&conf)
