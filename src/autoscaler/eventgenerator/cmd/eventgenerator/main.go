@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/cfhttp"
 	"code.cloudfoundry.org/clock"
@@ -148,7 +149,7 @@ func main() {
 	logger.Info("exited")
 }
 func loadConfig(path string) (*config.Config, error) {
-	configFile, err := os.Open(path)
+	configFile, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file %q: %s", path, err.Error())
 	}

@@ -10,6 +10,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"path/filepath"
 
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"google.golang.org/grpc"
@@ -155,7 +156,7 @@ func NewServerMutualTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config
 		return nil, fmt.Errorf("failed to load keypair: %s", err)
 	}
 
-	certBytes, err := ioutil.ReadFile(caCertFile)
+	certBytes, err := ioutil.ReadFile(filepath.Clean(caCertFile))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read ca cert file: %s", err)
 	}
@@ -187,7 +188,7 @@ func NewClientMutualTLSConfig(
 		return nil, fmt.Errorf("failed to load keypair: %s", err)
 	}
 
-	certBytes, err := ioutil.ReadFile(caCertFile)
+	certBytes, err := ioutil.ReadFile(filepath.Clean(caCertFile))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read ca cert file: %s", err)
 	}

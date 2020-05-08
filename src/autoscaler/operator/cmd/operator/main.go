@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/cfhttp"
 	"code.cloudfoundry.org/clock"
@@ -31,7 +32,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	configFile, err := os.Open(path)
+	configFile, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "failed to open config file '%s' : %s\n", path, err.Error())
 		os.Exit(1)
