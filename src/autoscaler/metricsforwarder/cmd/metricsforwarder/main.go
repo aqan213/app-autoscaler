@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
@@ -32,7 +33,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "missing config file")
 		os.Exit(1)
 	}
-	configFile, err := os.Open(path)
+	configFile, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "failed to open config file '%s' : %s\n", path, err.Error())
 		os.Exit(1)

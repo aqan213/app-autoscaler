@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net"
+	"path/filepath"
 
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 
@@ -34,7 +35,7 @@ func NewTestIngressServer(serverCert, serverKey, caCert string) (*TestIngressSer
 		ClientAuth:         tls.RequestClientCert,
 		InsecureSkipVerify: false,
 	}
-	caCertBytes, err := ioutil.ReadFile(caCert)
+	caCertBytes, err := ioutil.ReadFile(filepath.Clean(caCert))
 	if err != nil {
 		return nil, err
 	}

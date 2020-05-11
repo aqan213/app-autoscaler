@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
+	"path/filepath"
 
 	"autoscaler/db"
 	"autoscaler/db/sqldb"
@@ -126,7 +127,7 @@ func main() {
 }
 
 func loadConfig(path string) (*config.Config, error) {
-	configFile, err := os.Open(path)
+	configFile, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file %q: %s", path, err.Error())
 	}
