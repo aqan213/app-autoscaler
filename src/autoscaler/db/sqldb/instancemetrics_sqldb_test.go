@@ -14,6 +14,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"strings"
 )
 
 var _ = Describe("InstancemetricsSqldb", func() {
@@ -234,7 +235,10 @@ var _ = Describe("InstancemetricsSqldb", func() {
 				for i := 0; i < 100; i++ {
 					go func(count *int) {
 						err := idb.SaveMetricsInBulk([]*models.AppInstanceMetric{&metric1, &metric2})
-						Expect(err).To(HaveOccurred())
+						defer GinkgoRecover()
+						if strings.Contains(dbConfig.URL, "postgres"){
+							Expect(err).To(HaveOccurred())
+						}
 						lock.Lock()
 						*count = *count + 1
 						lock.Unlock()

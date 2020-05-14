@@ -5,10 +5,14 @@ import (
 	"autoscaler/models"
 	"context"
 	"strings"
+	"fmt"
+	"bytes"
+	"io"
 
 	"code.cloudfoundry.org/lager"
 	. "github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
+	"github.com/go-sql-driver/mysql"
 
 	"database/sql"
 	"time"
@@ -106,45 +110,36 @@ func (adb *AppMetricSQLDB) SaveAppMetricsInBulk(appMetrics []*models.AppMetric) 
 			return err
 		}
 
+		err = txn.Commit()
+		if err != nil {
+			adb.logger.Error("failed-to-commit-transaction", err)
+			txn.Rollback()
+			return err
+		}
+
 	case "mysql":
-		sqlStr :="INSERT INTO app_metric(app_id,metric_type,unit,timestamp,value)VALUES"
-		vals := []interface{}{}
-		if appMetrics == nil || len(appMetrics)==0 {
-			txn.Rollback()
-			return nil
-		}
+		newBuf := bytes.NewBuffer(nil)
 		for _, appMetric := range appMetrics {
-			sqlStr += "(?, ?, ?, ?, ?),"
-			vals = append(vals, appMetric.AppId, appMetric.MetricType, appMetric.Unit, appMetric.Timestamp, appMetric.Value)
+			line := strings.Join([]string{appMetric.AppId, appMetric.MetricType, appMetric.Unit,fmt.Sprintf("%v",appMetric.Timestamp),appMetric.Value},",")
+			newBuf.WriteString(line)
+			newBuf.WriteString("$")
+			
 		}
-		sqlStr = strings.TrimSuffix(sqlStr, ",")
-
-		stmt, err := txn.Prepare(sqlStr)
+		mysql.RegisterReaderHandler("data", func() io.Reader {
+			return io.Reader(newBuf)
+		})
+		defer mysql.DeregisterReaderHandler("data")
+	
+		_, err := adb.sqldb.Exec(`LOAD DATA LOCAL INFILE 'Reader::data' INTO TABLE app_metric
+		CHARACTER SET UTF8 
+		FIELDS TERMINATED BY ','
+		LINES TERMINATED BY '$'
+		(app_id, metric_type, unit, timestamp, value);`)
+	
 		if err != nil {
-			adb.logger.Error("failed-to-prepare-statement", err)
-			txn.Rollback()
+			adb.logger.Error("failed-to-execute", err)
 			return err
 		}
-
-		_, err = stmt.Exec(vals...)
-		if err != nil {
-			adb.logger.Error("failed-to-execute-statement", err)
-			txn.Rollback()
-			return err
-		}
-		err = stmt.Close()
-		if err != nil {
-			adb.logger.Error("failed-to-close-statement", err)
-			txn.Rollback()
-			return err
-		}
-	}
-
-	err = txn.Commit()
-	if err != nil {
-		adb.logger.Error("failed-to-commit-transaction", err)
-		txn.Rollback()
-		return err
 	}
 
 	return nil

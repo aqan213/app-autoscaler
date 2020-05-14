@@ -76,6 +76,7 @@ func registerConfig(cfg *MySQLConfig) error {
 		if tlsValue == "verify_identity" {	
 			tlsConfig.ServerName = strings.Split(cfg.config.Addr,":")[0]
 		}
+		tlsConfig.MinVersion = tls.VersionTLS12
 	
 		err = mysql.RegisterTLSConfig(tlsValue, &tlsConfig)
 		if err != nil {

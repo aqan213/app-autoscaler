@@ -4,6 +4,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"strings"
 
 	"autoscaler/db"
 	. "autoscaler/db/sqldb"
@@ -184,7 +185,10 @@ var _ = Describe("AppMetricSQLDB", func() {
 				for i := 0; i < 100; i++ {
 					go func(count *int) {
 						err := adb.SaveAppMetricsInBulk(appMetrics)
-						Expect(err).To(HaveOccurred())
+						defer GinkgoRecover()
+						if strings.Contains(dbConfig.URL, "postgres"){
+							Expect(err).To(HaveOccurred())
+						}
 						lock.Lock()
 						*count = *count + 1
 						lock.Unlock()

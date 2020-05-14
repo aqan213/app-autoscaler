@@ -7,11 +7,15 @@ import (
 	"code.cloudfoundry.org/lager"
 	. "github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
+	"github.com/go-sql-driver/mysql"
 
 	"context"
 	"database/sql"
 	"time"
 	"strings"
+	"io"
+	"bytes"
+	"fmt"
 )
 
 type InstanceMetricsSQLDB struct {
@@ -107,45 +111,36 @@ func (idb *InstanceMetricsSQLDB) SaveMetricsInBulk(metrics []*models.AppInstance
 			txn.Rollback()
 			return err
 		}
+
+		err = txn.Commit()
+		if err != nil {
+			idb.logger.Error("failed-to-commit-transaction", err)
+			txn.Rollback()
+			return err
+		}
 	case "mysql":
-		sqlStr :="INSERT INTO appinstancemetrics(appid, instanceindex, collectedat, name, unit, value, timestamp)VALUES"
-		vals := []interface{}{}
-		if metrics == nil || len(metrics) == 0 {
-			txn.Rollback()
-			return nil
-		}
+		newBuf := bytes.NewBuffer(nil)
 		for _, metric := range metrics {
-			sqlStr += "(?, ?, ?, ?, ?, ?, ?),"
-			vals = append(vals, metric.AppId, metric.InstanceIndex, metric.CollectedAt, metric.Name, metric.Unit, metric.Value, metric.Timestamp)
+			line := strings.Join([]string{metric.AppId, fmt.Sprintf("%v",metric.InstanceIndex), fmt.Sprintf("%v",metric.CollectedAt), metric.Name, metric.Unit, metric.Value, fmt.Sprintf("%v",metric.Timestamp)},",")
+			newBuf.WriteString(line)
+			newBuf.WriteString("$")
+			
 		}
-		sqlStr = strings.TrimSuffix(sqlStr, ",")
-
-		stmt, err := txn.Prepare(sqlStr)
+		mysql.RegisterReaderHandler("data", func() io.Reader {
+			return io.Reader(newBuf)
+		})
+		defer mysql.DeregisterReaderHandler("data")
+	
+		_, err := idb.sqldb.Exec(`LOAD DATA LOCAL INFILE 'Reader::data' INTO TABLE appinstancemetrics
+		CHARACTER SET UTF8 
+		FIELDS TERMINATED BY ','
+		LINES TERMINATED BY '$'
+		(appid, instanceindex, collectedat, name, unit, value, timestamp);`)
+	
 		if err != nil {
-			idb.logger.Error("failed-to-prepare-statement", err)
-			txn.Rollback()
+			idb.logger.Error("failed-to-execute", err)
 			return err
 		}
-
-		_, err = stmt.Exec(vals...)
-		if err != nil {
-			idb.logger.Error("failed-to-execute-statement", err)
-			txn.Rollback()
-			return err
-		}
-		err = stmt.Close()
-		if err != nil {
-			idb.logger.Error("failed-to-close-statement", err)
-			txn.Rollback()
-			return err
-		}
-	}
-
-	err = txn.Commit()
-	if err != nil {
-		idb.logger.Error("failed-to-commit-transaction", err)
-		txn.Rollback()
-		return err
 	}
 
 	return nil
