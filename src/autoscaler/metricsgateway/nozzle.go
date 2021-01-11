@@ -119,6 +119,12 @@ func (n *Nozzle) filterEnvelopes(envelops []*loggregator_v2.Envelope) {
 				} else if e.GetDeprecatedTags()["origin"].GetText() == METRICS_FORWARDER_ORIGIN {
 					n.logger.Debug("filter-envelopes-get-custom-metrics", lager.Data{"index": n.index, "appID": e.SourceId, "message": e.Message})
 					n.envelopChan <- e
+				}else if e.GetGauge().GetMetrics()["absolute_usage"] != nil {
+					n.logger.Debug("filter-envelopes-get-absolute-usage", lager.Data{"index": n.index, "appID": e.SourceId, "message": e.Message})
+					n.envelopChan <- e
+				} else if e.GetGauge().GetMetrics()["absolute_entitlement"] != nil {
+					n.logger.Debug("filter-envelopes-get-absolute-entitlement", lager.Data{"index": n.index, "appID": e.SourceId, "message": e.Message})
+					n.envelopChan <- e
 				}
 			case *loggregator_v2.Envelope_Timer:
 				peerType := e.GetTags()["peer_type"]

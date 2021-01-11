@@ -84,6 +84,8 @@ func (ep *envelopeProcessor) processEnvelope(e *loggregator_v2.Envelope) {
 		_, exist := g.GetMetrics()["memory_quota"]
 		if exist {
 			ep.processContainerMetrics(e.SourceId, uint32(instanceIndex), e.Timestamp, g)
+		} else if g.GetMetrics()["absolute_usage"] != nil {
+			ep.processAbsoluteCPUMetrics(e.SourceId, uint32(instanceIndex), e.Timestamp, g)
 		} else {
 			ep.processCustomMetrics(e.SourceId, uint32(instanceIndex), e.Timestamp, g)
 		}
@@ -138,6 +140,28 @@ func (ep *envelopeProcessor) processContainerMetrics(appID string, instanceIndex
 		ep.metricChan <- cpuMetric
 	}
 
+}
+
+func (ep *envelopeProcessor) processAbsoluteCPUMetrics(appID string, instanceIndex uint32, timestamp int64, g *loggregator_v2.Gauge) {
+	ep.logger.Debug("process-absolute-cpu-metrics", lager.Data{"index": instanceIndex, "appID": appID, "message": g})
+	absoluteCPUUsage, existCPU := g.GetMetrics()["absolute_usage"]
+	absoluteCPUEntitlement, existEnt := g.GetMetrics()["absolute_entitlement"]
+
+	if existCPU && existEnt && absoluteCPUEntitlement.GetValue() != 0 {
+	    absoluteCPU := &models.AppInstanceMetric{
+	        AppId:         appID,
+	        InstanceIndex: instanceIndex,
+	        CollectedAt:   ep.clock.Now().UnixNano(),
+	        Name:          models.MetricNameAbsoluteCPUUtil,
+	        Unit:          models.UnitPercentage,
+	        Value:         fmt.Sprintf("%d", int(math.Ceil(absoluteCPUUsage.GetValue()/absoluteCPUEntitlement.GetValue()*100))),
+	        Timestamp:     timestamp,
+	    }
+	    ep.logger.Debug("process-absolute-cpu-metrics", lager.Data{"index": instanceIndex, "appID": appID, "absoluteCPU": absoluteCPU})
+	    ep.metricChan <- absoluteCPU
+	
+	}
+	
 }
 
 func (ep *envelopeProcessor) processHttpStartStop(appID string, instanceIndex uint32, t *loggregator_v2.Timer) {
